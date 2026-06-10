@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 import { ageFromBirthDate, isValidBrazilianPhone, isValidCnpj, isValidCpf, onlyDigits } from "@/lib/validations/br";
 
 const minimumAge = Number(process.env.MINIMUM_PROFESSIONAL_AGE ?? 14);
@@ -192,6 +192,8 @@ async function saveCompanySignup(client: ReturnType<typeof createAdminClient>, u
 }
 
 export async function signInWithGoogleAction(formData?: FormData) {
+  if (!hasSupabasePublicEnv()) redirect("/login?error=configuracao-supabase-incompleta");
+
   const supabase = await createServerClient();
   const origin = await getOrigin();
   const accountType = formData instanceof FormData ? String(formData.get("accountType") ?? "") : "";
@@ -214,6 +216,8 @@ export async function signInWithGoogleAction(formData?: FormData) {
 }
 
 export async function signInWithEmailAction(formData: FormData) {
+  if (!hasSupabasePublicEnv()) redirect("/login?error=configuracao-supabase-incompleta");
+
   const supabase = await createServerClient();
   const parsed = emailPasswordSchema.safeParse({
     email: formData.get("email"),

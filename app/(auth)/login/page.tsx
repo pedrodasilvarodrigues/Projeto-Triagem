@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, CheckCircle2, LockKeyhole, Mail, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { signInWithEmailAction, signInWithGoogleAction } from "@/lib/actions/auth";
 import { resolveAuthenticatedEntryPath } from "@/lib/auth/entry";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 
 const errorMessages: Record<string, string> = {
   "sessao-expirada": "Sua sessao expirou. Entre novamente para continuar.",
   "nao-foi-possivel-iniciar-google": "Nao foi possivel iniciar o login com Google.",
-  "credenciais-invalidas": "Email ou senha invalidos."
+  "credenciais-invalidas": "Email ou senha invalidos.",
+  "configuracao-supabase-incompleta": "Configuracao do Supabase pendente. Adicione as variaveis de ambiente na Vercel para ativar o login."
 };
 
 const messageMap: Record<string, string> = {
@@ -35,10 +36,14 @@ function GoogleIcon() {
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
-  const supabase = await createServerClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (userData.user) {
-    redirect(await resolveAuthenticatedEntryPath(supabase, userData.user.id, userData.user.user_metadata));
+  const isSupabaseConfigured = hasSupabasePublicEnv();
+
+  if (isSupabaseConfigured) {
+    const supabase = await createServerClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      redirect(await resolveAuthenticatedEntryPath(supabase, userData.user.id, userData.user.user_metadata));
+    }
   }
 
   const params = await searchParams;
@@ -142,6 +147,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 </div>
               ) : null}
 
+              {!isSupabaseConfigured ? (
+                <div className="mt-5 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                  Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel para liberar o acesso.
+                </div>
+              ) : null}
+
               <form action={signInWithEmailAction} className="mt-6 space-y-4">
                 <label className="block text-sm font-semibold text-slate-800">
                   Email
@@ -162,7 +173,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                     Esqueci minha senha
                   </Link>
                 </div>
-                <button className="group inline-flex w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(29,78,216,0.28)] transition hover:-translate-y-0.5 hover:bg-blue-800 hover:shadow-[0_18px_42px_rgba(29,78,216,0.34)]" type="submit">
+                <button className="group inline-flex w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(29,78,216,0.28)] transition hover:-translate-y-0.5 hover:bg-blue-800 hover:shadow-[0_18px_42px_rgba(29,78,216,0.34)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none disabled:hover:translate-y-0" type="submit" disabled={!isSupabaseConfigured}>
                   Entrar
                   <ArrowRight aria-hidden="true" className="transition group-hover:translate-x-0.5" size={17} />
                 </button>
@@ -175,7 +186,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               </div>
 
               <form action={signInWithGoogleAction}>
-                <button className="group flex w-full items-center justify-center gap-3 rounded-md border border-slate-300 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md" type="submit">
+                <button className="group flex w-full items-center justify-center gap-3 rounded-md border border-slate-300 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0" type="submit" disabled={!isSupabaseConfigured}>
                   <GoogleIcon />
                   Continuar com Google
                   <ArrowRight aria-hidden="true" className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-700" size={16} />
